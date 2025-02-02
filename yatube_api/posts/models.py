@@ -24,3 +24,40 @@ class Comment(models.Model):
     text = models.TextField()
     created = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
+
+
+class Group(models.Model):
+
+    title = models.CharField(
+        verbose_name='Название сообщества',
+        max_length=200,
+    )
+    slug = models.SlugField(
+        verbose_name='slug',
+        unique=True,
+    )
+    description = models.TextField(
+        verbose_name='Описание',
+    )
+
+    def __str__(self):
+        return self.title
+
+
+class Follow(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        verbose_name='Подписчик',
+        on_delete=models.CASCADE,
+        related_name='follower',
+    )
+    following = models.ForeignKey(
+        User,
+        verbose_name='Автор',
+        on_delete=models.CASCADE,
+        related_name='following',
+    )
+
+    def __str__(self):
+        return f'{self.user} подписчик автора - {self.following}'

@@ -1,58 +1,69 @@
-from rest_framework import serializers
+import rest_framework.serializers as slz
 from rest_framework.validators import UniqueTogetherValidator
 
-from posts.models import Comment, Post, Follow, User, Group
+from posts.models import Group, Post, Comment, Follow, User
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True
-    )
+class GroupSerializer(slz.ModelSerializer):
+    """Сериализатор модели Group."""
 
-    class Meta:
-        fields = '__all__'
-        model = Post
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username'
-    )
-
-    class Meta:
-        fields = '__all__'
-        model = Comment
-
-
-class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='username',
-        default=serializers.CurrentUserDefault()
-    )
-    following = serializers.SlugRelatedField(
-        slug_field='username',
-        queryset=User.objects.all()
-    )
-
-    validators = [UniqueTogetherValidator(
-        queryset=Follow.objects.all(),
-        fields=['user', 'following'])]
-
-    def validate(self, data):
-        if self.context['request'].user != data.get('following'):
-            return data
-        raise serializers.ValidationError(
-            'Нельзя подписаться на себя'
-        )
-
-    class Meta:
-        fields = ('__all__')
-        model = Follow
-
-
-class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
-        fields = ('__all__')
+        fields = '__all__'
+
+
+class PostSerializer(slz.ModelSerializer):
+    """Сериализатор модели Post."""
+
+    author = slz.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+    )
+
+    class Meta:
+        model = Post
+        fields = '__all__'
+
+
+class CommentSerializer(slz.ModelSerializer):
+    """Сериализатор модели Comment."""
+
+    author = slz.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+    )
+
+    class Meta:
+        model = Comment
+        fields = '__all__'
+        read_only_fields = ('post',)
+
+
+class FollowSerializer(slz.ModelSerializer):
+    """Сериализатор модели Follow."""
+
+    user = slz.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+        default=slz.CurrentUserDefault(),
+    )
+    following = slz.SlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all(),
+    )
+
+    class Meta:
+        model = Follow
+        fields = '__all__'
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=('following', 'user'),
+                message='Подписка уже оформлена.',
+            )
+        ]
+
+    def validate(self, attrs):
+        if self.context['request'].user == attrs['following']:
+            raise slz.ValidationError('Невозможно подписаться на себя.')
+        return attrs
